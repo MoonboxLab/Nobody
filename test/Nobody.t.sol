@@ -130,6 +130,23 @@ contract Receiver5 is IERC721Receiver {
     }
 }
 
+contract Receiver6 {
+    address public nobodyAddress;
+    bytes32[] public proof;
+
+    constructor(address _nobodyAddress) {
+        nobodyAddress = _nobodyAddress;
+    }
+
+    function mintWaitList(uint8 number, bytes32[] calldata _proof) external payable {
+        proof = _proof;
+        (bool success, ) = nobodyAddress.call{value: msg.value}(
+            abi.encodeWithSignature("mintWaitList(uint8,bytes32[])", number, proof)
+        );
+        require(success, "Receiver: mintWaitList call failed");
+    }
+}
+
 contract NobodyTest is Test {
     Nobody nobody;
     bytes32[] proof;
@@ -225,8 +242,27 @@ contract NobodyTest is Test {
         nobody.airdropWaitList(addresses);
     }
 
-    function testFail_refundWaitList() public {
+    function test_refundWaitList_0() public {
         Receiver5 receiver = new Receiver5(address(nobody));
+
+        nobody.setIsPresaleActive(true);
+
+        address caller = address(0x1111111111111111111111111111111111111111);
+        vm.prank(caller);
+        vm.deal(caller, 10 ether);
+        vm.deal(address(receiver), 1 ether);
+
+        receiver.mintWaitList{value: 0.1 ether}(1, proof);
+
+        nobody.setIsPresaleActive(false);
+
+        address[] memory addresses = new address[](1);
+        addresses[0] = address(receiver);
+        nobody.refundWaitList(addresses);
+    }
+
+    function test_refundWaitList_1() public {
+        Receiver6 receiver = new Receiver6(address(nobody));
 
         nobody.setIsPresaleActive(true);
 

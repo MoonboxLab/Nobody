@@ -21,6 +21,8 @@ import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 
 contract Nobody is ERC721Enumerable, ERC2981, Ownable, ReentrancyGuard {
+    event RefundFailed(address indexed recipient, uint256 value);
+
     using Strings for uint256;
 
     string public PROVENANCE;
@@ -121,7 +123,10 @@ contract Nobody is ERC721Enumerable, ERC2981, Ownable, ReentrancyGuard {
             uint256 amount = _waitListAddressAmount[_address];
             if (amount != 0) {
                 delete _waitListAddressAmount[_address];
-                Address.sendValue(payable(_address), amount);
+                (bool success, ) = payable(_address).call{value: amount, gas: 2300}("");
+                if (!success) {
+                    emit RefundFailed(_address, amount);
+                }
             }
         }
     }
@@ -226,7 +231,7 @@ contract Nobody is ERC721Enumerable, ERC2981, Ownable, ReentrancyGuard {
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
         _requireMinted(tokenId);
 
-        if (isRevealed == false) {
+        if (!isRevealed) {
             return _notRevealedURI;
         }
 
