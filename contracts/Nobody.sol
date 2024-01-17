@@ -18,7 +18,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/common/ERC2981.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 
-contract NobodyERC721 is ERC721Enumerable, ERC2981, Ownable {
+contract Nobody is ERC721Enumerable, ERC2981, Ownable {
     uint256 public constant MAX_SUPPLY = 10000;
 
     string public PROVENANCE;
@@ -27,6 +27,8 @@ contract NobodyERC721 is ERC721Enumerable, ERC2981, Ownable {
     string private _notRevealedURI;
 
     bool public isRevealed = false;
+
+    error ExceedMaxSupply();
 
     constructor() ERC721("Nobody", "NOBODY") {}
 
@@ -50,10 +52,10 @@ contract NobodyERC721 is ERC721Enumerable, ERC2981, Ownable {
         _setDefaultRoyalty(receiver, feeNumerator);
     }
 
-    function airdrop(address[] calldata addresses, uint8 number) external onlyOwner {
+    function airdrop(address[] calldata addresses, uint256 number) external onlyOwner {
         for (uint256 i = 0; i < addresses.length; i++) {
             uint256 ts = totalSupply();
-            require(ts + number <= MAX_SUPPLY, "Nobody: airdrop would exceed max supply.");
+            if (ts + number > MAX_SUPPLY) revert ExceedMaxSupply();
             for (uint256 j = 0; j < number; j++) {
                 _safeMint(addresses[i], ts + j);
             }
@@ -73,5 +75,4 @@ contract NobodyERC721 is ERC721Enumerable, ERC2981, Ownable {
 
         return bytes(baseURI).length > 0 ? string(abi.encodePacked(baseURI, Strings.toString(tokenId))) : "";
     }
-
 }
