@@ -25,10 +25,14 @@ contract NobodyReserve is Ownable, ReentrancyGuard, VRFConsumerBaseV2 {
     uint64 private _VRFSubscriptionId;
     uint256[] private _randomWords;
 
+    uint256 public totalReserved;
     uint256 private _totalWeight;
     uint256 private _priorityCount;
     address[] private _publicReservers;
 
+    // Don't tell me about using merkel tree to save gas
+    // In order to prohibit whitelist addresses from participating in the public reserve,
+    // all whitelist addresses need to be on-chain
     mapping(address => bool) public whitelist;
     mapping(address => bool) public reserved;
     mapping(address => bool) public raffleWon;
@@ -121,10 +125,11 @@ contract NobodyReserve is Ownable, ReentrancyGuard, VRFConsumerBaseV2 {
         emit RandomWordsRequested(requestId);
     }
 
-    function executeRaffle(uint8 raffleRound, uint16 raffleCount) external onlyOwner {
-        if (raffleRound >= _randomWords.length) revert InvalidRaffle();
+    function executeRaffle(uint256 raffleRound, uint256 raffleCount) external onlyOwner {
+        if (raffleRound > _randomWords.length) revert InvalidRaffle();
 
-        uint256 randomWord = _randomWords[raffleRound];
+        uint256 raffleIndex = raffleRound - 1;
+        uint256 randomWord = _randomWords[raffleIndex];
         uint256 priorityTotalWeight = _priorityCount * PRIORITY_WEIGHT;
 
         while (raffleCount > 0) {
@@ -140,7 +145,7 @@ contract NobodyReserve is Ownable, ReentrancyGuard, VRFConsumerBaseV2 {
             address winner = _publicReservers[index];
             // select the next reserver as the winner if the current reserver has won
             while (raffleWon[winner]) {
-                index = index++ < _publicReservers.length ? index : 0;
+                index = index < _publicReservers.length - 1 ? index + 1 : 0;
                 winner = _publicReservers[index];
             }
             // set reserver as winner
@@ -162,6 +167,7 @@ contract NobodyReserve is Ownable, ReentrancyGuard, VRFConsumerBaseV2 {
         if (msg.value != reservePrice) revert InvalidValue();
 
         reserved[msg.sender] = true;
+        totalReserved++;
 
         emit WhitelistReserved(msg.sender);
     }
@@ -174,6 +180,7 @@ contract NobodyReserve is Ownable, ReentrancyGuard, VRFConsumerBaseV2 {
         if (msg.value != reservePrice) revert InvalidValue();
 
         reserved[msg.sender] = true;
+        totalReserved++;
         _publicReservers.push(msg.sender);
 
         if (block.timestamp < priorityTime) {
