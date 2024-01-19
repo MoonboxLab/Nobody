@@ -370,6 +370,7 @@ describe("NobodyReserve", function () {
     await expect(reserve.connect(addr1).executeRaffle(1, 2)).to.be.revertedWith("Ownable: caller is not the owner")
 
     await expect(reserve.executeRaffle(4, 2)).to.be.revertedWithCustomError(reserve, "InvalidRaffle")
+    await expect(reserve.executeRaffle(1, 6)).to.be.revertedWithCustomError(reserve, "InvalidRaffle")
 
     expect(await reserve.raffleWon(addr2)).to.equal(false)
     expect(await reserve.raffleWon(addr3)).to.equal(false)
