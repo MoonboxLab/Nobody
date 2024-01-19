@@ -127,6 +127,7 @@ contract NobodyReserve is Ownable, ReentrancyGuard, VRFConsumerBaseV2 {
 
     function executeRaffle(uint256 raffleRound, uint256 raffleCount) external onlyOwner {
         if (raffleRound > _randomWords.length) revert InvalidRaffle();
+        if (raffleCount > _publicReservers.length) revert InvalidRaffle();
 
         uint256 raffleIndex = raffleRound - 1;
         uint256 randomWord = _randomWords[raffleIndex];
